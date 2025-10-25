@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💣 Démineur Pro - Spring Boot</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>💣 Démineur Pro - Spring Boot</h1>
+        <div class="api-status" id="apiStatus">🔌 Connexion API...</div>
+    </header>
+
+    <div class="top-panel">
+        <div class="info-boxes">
+            <div class="info-box mines">
+                <label>💣 Mines</label>
+                <div class="value" id="minesCount">10</div>
+            </div>
+            <div class="info-box status">
+                <label>🎮 Statut</label>
+                <div class="value" id="gameStatus">En attente...</div>
+            </div>
+            <div class="info-box timer">
+                <label>⏱️ Temps</label>
+                <div class="value" id="timer">0s</div>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-warning" onclick="showScoreboard()">🏆 Scores</button>
+            <button class="btn-primary" onclick="showNewGameModal()">🔄 Nouvelle Partie</button>
+        </div>
+    </div>
+
+    <div class="center">
+        <div class="game-area">
+            <div class="board" id="board"></div>
+        </div>
+    </div>
+
+    <div class="bottom-panel">
+        <div class="player-info">👤 <span id="playerName">Joueur</span></div>
+        <button class="btn-success" onclick="revealSafeCell()">💡 Indice</button>
+        <button class="btn-primary" onclick="changePseudo()">Changer de pseudo</button>
+    </div>
+</div>
+
+<!-- Modal Pseudo -->
+<div class="modal" id="pseudoModal">
+    <div class="modal-content">
+        <h2>Bienvenue !</h2>
+        <label>Entrez votre pseudo :</label>
+        <input type="text" id="pseudoInput" placeholder="Votre pseudo" maxlength="50">
+        <div class="modal-buttons">
+            <button class="btn-primary" onclick="setPseudo()">Commencer</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nouvelle Partie -->
+<div class="modal" id="newGameModal">
+    <div class="modal-content">
+        <h2>Nouvelle Partie</h2>
+        <label>Choisir la difficulté :</label>
+        <select id="difficulty">
+            <option value="beginner">🟢 Débutant (9×9, 10 mines)</option>
+            <option value="intermediate">🟡 Intermédiaire (16×16, 40 mines)</option>
+            <option value="expert">🔴 Expert (16×30, 99 mines)</option>
+            <option value="custom">⚙️ Personnalisé</option>
+        </select>
+        <div id="customSettings" style="display:none;">
+            <label>Lignes (5-40):</label>
+            <input type="number" id="customRows" min="5" max="40" value="9">
+            <label>Colonnes (5-60):</label>
+            <input type="number" id="customCols" min="5" max="60" value="9">
+            <label>Mines:</label>
+            <input type="number" id="customMines" min="1" value="10">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-primary" onclick="startNewGame()">Démarrer</button>
+            <button class="btn-warning" onclick="closeModal('newGameModal')">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Scoreboard -->
+<div class="modal" id="scoreboardModal">
+    <div class="modal-content" style="max-width: 800px;">
+        <h2>🏆 Tableau des Scores</h2>
+        <div class="scoreboard" id="scoreboardContent">
+            <p>Chargement...</p>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-primary" onclick="closeModal('scoreboardModal')">Fermer</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuration de l'API
+    const API_URL = 'http://localhost:8080/api';
+
+    // Variables du jeu
+    let rows = 9, cols = 9, mineCount = 10;
+    let cells = [];
+    let gameStarted = false;
+    let gameOver = false;
+    let revealedCount = 0;
+    let flags = 0;
+    let seconds = 0;
+    let timerInterval = null;
+    let currentDifficulty = "Débutant";
+    let playerPseudo = "Joueur";
+
+    // Vérifier la connexion API au démarrage
+    document.addEventListener('DOMContentLoaded', () => {
+        checkApiHealth();
+
+        document.getElementById('difficulty').addEventListener('change', (e) => {
+            document.getElementById('customSettings').style.display =
+                e.target.value === 'custom' ? 'block' : 'none';
+        });
+
+        showModal('pseudoModal');
+    });
+
+    async function checkApiHealth() {
+        try {
+            const response = await fetch(`${API_URL}/health`);
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('apiStatus').textContent = '✅ API Connectée';
+                document.getElementById('apiStatus').classList.remove('offline');
+                console.log('✓ Connexion API réussie');
+            }
+        } catch (error) {
+            document.getElementById('apiStatus').textContent = '❌ API Déconnectée';
+            document.getElementById('apiStatus').classList.add('offline');
+            console.error('✗ Erreur de connexion API:', error);
+            alert('⚠️ Impossible de se connecter au serveur.\nAssurez-vous que le backend Spring Boot est démarré sur le port 8080.');
+        }
+    }
+
+    function showModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+
+    function setPseudo() {
+        const input = document.getElementById('pseudoInput').value.trim();
+        if (input) {
+            playerPseudo = input;
+            document.getElementById('playerName').textContent = playerPseudo;
+        }
+        closeModal('pseudoModal');
+        startNewGame();
+    }
+
+    function changePseudo() {
+        document.getElementById('pseudoInput').value = playerPseudo;
+        showModal('pseudoModal');
+    }
+
+    function showNewGameModal() {
+        showModal('newGameModal');
+    }
+
+    function startNewGame() {
+        const difficulty = document.getElementById('difficulty').value;
+
+        switch(difficulty) {
+            case 'beginner':
+                rows = 9; cols = 9; mineCount = 10;
+                currentDifficulty = "Débutant";
+                break;
+            case 'intermediate':
+                rows = 16; cols = 16; mineCount = 40;
+                currentDifficulty = "Intermédiaire";
+                break;
+            case 'expert':
+                rows = 16; cols = 30; mineCount = 99;
+                currentDifficulty = "Expert";
+                break;
+            case 'custom':
+                rows = Math.max(5, Math.min(40, parseInt(document.getElementById('customRows').value)));
+                cols = Math.max(5, Math.min(60, parseInt(document.getElementById('customCols').value)));
+                mineCount = Math.max(1, parseInt(document.getElementById('customMines').value));
+                mineCount = Math.min(mineCount, rows * cols - 1);
+                currentDifficulty = "Personnalisé";
+                break;
+        }
+
+        closeModal('newGameModal');
+        initGame();
+    }
+
+    function initGame() {
+        gameStarted = false;
+        gameOver = false;
+        revealedCount = 0;
+        flags = 0;
+        seconds = 0;
+
+        if (timerInterval) clearInterval(timerInterval);
+
+        document.getElementById('minesCount').textContent = mineCount;
+        document.getElementById('timer').textContent = '0s';
+        document.getElementById('gameStatus').textContent = 'En attente...';
+
+        createBoard();
+    }
+
+    function createBoard() {
+        const board = document.getElementById('board');
+        board.innerHTML = '';
+        board.style.gridTemplateColumns = `repeat(${cols}, 40px)`;
+
+        cells = [];
+        for (let r = 0; r < rows; r++) {
+            cells[r] = [];
+            for (let c = 0; c < cols; c++) {
+                const cell = {
+                    row: r,
+                    col: c,
+                    isMine: false,
+                    adjacent: 0,
+                    revealed: false,
+                    flagged: false,
+                    element: null
+                };
+
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'cell';
+                cellDiv.dataset.row = r;
+                cellDiv.dataset.col = c;
+
+                cellDiv.addEventListener('click', () => handleLeftClick(r, c));
+                cellDiv.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    handleRightClick(r, c);
+                });
+
+                cell.element = cellDiv;
+                cells[r][c] = cell;
+                board.appendChild(cellDiv);
+            }
+        }
+    }
+
+    function placeMines(avoidRow, avoidCol) {
+        const forbidden = new Set();
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                const r = avoidRow + dr;
+                const c = avoidCol + dc;
+                if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                    forbidden.add(`${r},${c}`);
+                }
+            }
+        }
+
+        let placed = 0;
+        while (placed < mineCount) {
+            const r = Math.floor(Math.random() * rows);
+            const c = Math.floor(Math.random() * cols);
+
+            if (forbidden.has(`${r},${c}`) || cells[r][c].isMine) continue;
+
+            cells[r][c].isMine = true;
+            placed++;
+        }
+
+        // Calculate adjacent mines
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (cells[r][c].isMine) continue;
+
+                let count = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const nr = r + dr;
+                        const nc = c + dc;
+                        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && cells[nr][nc].isMine) {
+                            count++;
+                        }
+                    }
+                }
+                cells[r][c].adjacent = count;
+            }
+        }
+    }
+
+    function handleLeftClick(r, c) {
+        if (gameOver) return;
+
+        const cell = cells[r][c];
+        if (cell.revealed || cell.flagged) return;
+
+        if (!gameStarted) {
+            placeMines(r, c);
+            gameStarted = true;
+            startTimer();
+            document.getElementById('gameStatus').textContent = 'En jeu...';
+        }
+
+        revealCell(r, c);
+    }
+
+    function handleRightClick(r, c) {
+        if (gameOver || !gameStarted) return;
+
+        const cell = cells[r][c];
+        if (cell.revealed) return;
+
+        cell.flagged = !cell.flagged;
+        flags += cell.flagged ? 1 : -1;
+
+        cell.element.classList.toggle('flagged', cell.flagged);
+        cell.element.textContent = cell.flagged ? '🚩' : '';
+
+        document.getElementById('minesCount').textContent = Math.max(0, mineCount - flags);
+    }
+
+    function revealCell(r, c) {
+        const cell = cells[r][c];
+        if (cell.revealed || cell.flagged) return;
+
+        cell.revealed = true;
+        revealedCount++;
+        cell.element.classList.add('revealed');
+
+        if (cell.isMine) {
+            cell.element.textContent = '💣';
+            cell.element.classList.add('mine-hit');
+            gameLost();
+            return;
+        }
+
+        if (cell.adjacent > 0) {
+            cell.element.textContent = cell.adjacent;
+            cell.element.classList.add(`num-${cell.adjacent}`);
+        }
+
+        if (cell.adjacent === 0) {
+            // Flood fill
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                        revealCell(nr, nc);
+                    }
+                }
+            }
+        }
+
+        checkWin();
+    }
+
+    function revealSafeCell() {
+        if (!gameStarted || gameOver) return;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cell = cells[r][c];
+                if (!cell.revealed && !cell.isMine && !cell.flagged) {
+                    revealCell(r, c);
+                    return;
+                }
+            }
+        }
+    }
+
+    function checkWin() {
+        if (revealedCount === rows * cols - mineCount) {
+            gameOver = true;
+            stopTimer();
+            document.getElementById('gameStatus').textContent = '🎉 Victoire !';
+            document.getElementById('minesCount').textContent = '0';
+
+            // Reveal all mines as flags
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (cells[r][c].isMine) {
+                        cells[r][c].element.textContent = '🚩';
+                        cells[r][c].element.style.background = '#27AE60';
+                    }
+                }
+            }
+
+            saveScore();
+        }
+    }
+
+    function gameLost() {
+        gameOver = true;
+        stopTimer();
+        document.getElementById('gameStatus').textContent = '💥 Game Over';
+
+        // Reveal all mines
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (cells[r][c].isMine) {
+                    cells[r][c].element.textContent = '💣';
+                    cells[r][c].element.classList.add('mine');
+                }
+            }
+        }
+    }
+
+    function startTimer() {
+        timerInterval = setInterval(() => {
+            seconds++;
+            document.getElementById('timer').textContent = seconds + 's';
+        }, 1000);
+    }
+
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+
+    async function saveScore() {
+        try {
+            const response = await fetch(`${API_URL}/score`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pseudo: playerPseudo,
+                    difficulte: currentDifficulty,
+                    temps: seconds
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                console.log('✓ Score enregistré');
+                showTop4AfterWin();
+            } else {
+                console.error('Erreur:', data.message);
+                alert('Erreur lors de l\'enregistrement du score');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Impossible de contacter le serveur');
+        }
+    }
+
+    async function showTop4AfterWin() {
+        try {
+            const response = await fetch(`${API_URL}/scores/${encodeURIComponent(currentDifficulty)}`);
+            const data = await response.json();
+
+            if (data.success && data.scores.length > 0) {
+                let message = `🎉 Félicitations ${playerPseudo} !\n\n`;
+                message += `Difficulté: ${currentDifficulty}\n`;
+                message += `Votre temps: ${seconds} secondes\n\n`;
+                message += `🏆 Top 4 - ${currentDifficulty}:\n\n`;
+
+                data.scores.forEach((score) => {
+                    const medal = score.rang == 1 ? '🥇' : score.rang == 2 ? '🥈' : score.rang == 3 ? '🥉' : '🏅';
+                    message += `${medal} ${score.rang}. ${score.pseudo} - ${score.temps}s (${score.date})\n`;
+                });
+
+                alert(message);
+            } else {
+                alert(`Félicitations ${playerPseudo} !\nDifficulté: ${currentDifficulty}\nTemps: ${seconds} secondes\n\nVous êtes le premier sur cette difficulté !`);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert(`Félicitations ${playerPseudo} !\nDifficulté: ${currentDifficulty}\nTemps: ${seconds} secondes\n\nVotre score a été enregistré !`);
+        }
+    }
+
+    async function showScoreboard() {
+        const difficulty = prompt('Quelle difficulté voulez-vous voir ?\n\nEntrez:\n- Débutant\n- Intermédiaire\n- Expert\n- Personnalisé', currentDifficulty);
+
+        if (!difficulty) return;
+
+        try {
+            const response = await fetch(`${API_URL}/scores/${encodeURIComponent(difficulty)}`);
+            const data = await response.json();
+
+            const content = document.getElementById('scoreboardContent');
+
+            if (data.success && data.scores.length > 0) {
+                let html = `<h3 style="text-align:center; margin-bottom:15px;">Top 4 - ${data.difficulte}</h3>`;
+                html += '<table><thead><tr><th>🏆 Rang</th><th>Pseudo</th><th>Temps</th><th>Date</th></tr></thead><tbody>';
+
+                data.scores.forEach((score) => {
+                    const medal = score.rang == 1 ? '🥇' : score.rang == 2 ? '🥈' : score.rang == 3 ? '🥉' : '🏅';
+                    html += `<tr>
+                        <td>${medal} ${score.rang}</td>
+                        <td><strong>${score.pseudo}</strong></td>
+                        <td>${score.temps}s</td>
+                        <td>${score.date}</td>
+                    </tr>`;
+                });
+
+                html += '</tbody></table>';
+                content.innerHTML = html;
+            } else {
+                content.innerHTML = `<p style="text-align:center;">Aucun score enregistré pour la difficulté "${difficulty}"</p>`;
+            }
+
+            showModal('scoreboardModal');
+        } catch (error) {
+            console.error('Erreur:', error);
+            document.getElementById('scoreboardContent').innerHTML = '<p style="text-align:center; color:#E74C3C;">Erreur de chargement des scores</p>';
+            showModal('scoreboardModal');
+        }
+    }
+</script>
+</body>
+</html>

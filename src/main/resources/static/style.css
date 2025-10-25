@@ -1,0 +1,285 @@
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Arial', sans-serif;
+        background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);
+        color: #ECF0F1;
+        min-height: 100vh;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .container {
+        max-width: 1200px;
+        width: 100%;
+    }
+
+    header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .top-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #34495E;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+        .info-boxes {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .info-box {
+            background: #2C3E50;
+            padding: 15px 25px;
+            border-radius: 8px;
+            border: 2px solid #1a252f;
+            min-width: 120px;
+        }
+
+        .info-box label {
+            display: block;
+            font-size: 0.9em;
+            color: #95A5A6;
+            margin-bottom: 5px;
+        }
+
+        .info-box .value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .info-box.mines .value { color: #E74C3C; }
+        .info-box.timer .value { color: #3498DB; }
+        .info-box.status .value { font-size: 1.2em; }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary { background: #3498DB; }
+        .btn-primary:hover { background: #5DADE2; }
+        .btn-success { background: #27AE60; }
+        .btn-success:hover { background: #2ECC71; }
+        .btn-warning { background: #F39C12; }
+        .btn-warning:hover { background: #F4A742; }
+
+        .game-area {
+            background: #34495E;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: inline-block;
+            margin: 0 auto;
+        }
+
+        .board {
+            display: grid;
+            gap: 3px;
+            background: #2C3E50;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: #95A5A6;
+            border: 2px solid #7F8C8D;
+            border-radius: 4px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .cell:hover:not(.revealed) {
+            background: #ABB7B7;
+            transform: scale(1.05);
+        }
+
+        .cell.revealed {
+            background: #BDC3C7;
+            border-color: #95A5A6;
+            cursor: default;
+        }
+
+        .cell.flagged {
+            background: #F39C12;
+        }
+
+        .cell.mine {
+            background: #E74C3C;
+        }
+
+        .cell.mine-hit {
+            background: #C0392B;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .cell.num-1 { color: #3498DB; }
+        .cell.num-2 { color: #27AE60; }
+        .cell.num-3 { color: #E74C3C; }
+        .cell.num-4 { color: #8E44AD; }
+        .cell.num-5 { color: #D35400; }
+        .cell.num-6 { color: #16A085; }
+        .cell.num-7 { color: #000; }
+        .cell.num-8 { color: #7F8C8D; }
+
+        .bottom-panel {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .player-info {
+            background: #34495E;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1.1em;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #34495E;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #3498DB;
+        }
+
+        .modal-content input,
+        .modal-content select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #2C3E50;
+            border-radius: 6px;
+            font-size: 1em;
+            background: #2C3E50;
+            color: #ECF0F1;
+        }
+
+        .modal-content label {
+            display: block;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        /* Scoreboard */
+        .scoreboard {
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .scoreboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .scoreboard th,
+        .scoreboard td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #2C3E50;
+        }
+
+        .scoreboard th {
+            background: #3498DB;
+            position: sticky;
+            top: 0;
+        }
+
+        .scoreboard tr:hover {
+            background: #2C3E50;
+        }
+
+        .center {
+            text-align: center;
+        }
