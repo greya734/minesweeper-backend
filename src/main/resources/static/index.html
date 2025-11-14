@@ -500,7 +500,8 @@
     const difficulty = document.getElementById('scoreDifficulty').value;
     
     try {
-        const response = await fetch(`${API_URL}/scores/top4/${difficulty}`);
+       
+        const response = await fetch(`${API_URL}/scores/top4/${encodeURIComponent(difficulty)}`);
         
         if (!response.ok) {
             console.error('Erreur HTTP:', response.status);
@@ -614,56 +615,72 @@ function showScoresModal() {
     
     // Créer le menu de sélection
     content.innerHTML = `
-        <div>
-            <label for="difficultySelect">Sélectionnez une difficulté :</label>
-            <select id="difficultySelect">
-                <option value="Débutant" ${currentDifficulty = 'Débutant' ? 'selected' : ''}>🟢 Débutant</option>
-                <option value="Intermédiaire" ${currentDifficulty = 'Intermédiaire' ? 'selected' : ''}>🟡 Intermédiaire</option>
-                <option value="Expert" ${currentDifficulty = 'Expert' ? 'selected' : ''}>🔴 Expert</option>
-                <option value="Personnalisé" ${currentDifficulty = 'Personnalisé' ? 'selected' : ''}>⚙️ Personnalisé</option>
+        <div style="margin-bottom: 20px;">
+            <label for="difficultySelect" style="font-weight: bold; margin-right: 10px;">Sélectionnez une difficulté :</label>
+            <select id="difficultySelect" style="padding: 8px; border-radius: 5px; border: 2px solid #667eea;">
+                <option value="Débutant" ${currentDifficulty === 'Débutant' ? 'selected' : ''}>🟢 Débutant</option>
+                <option value="Intermédiaire" ${currentDifficulty === 'Intermédiaire' ? 'selected' : ''}>🟡 Intermédiaire</option>
+                <option value="Expert" ${currentDifficulty === 'Expert' ? 'selected' : ''}>🔴 Expert</option>
+                <option value="Personnalisé" ${currentDifficulty === 'Personnalisé' ? 'selected' : ''}>⚙️ Personnalisé</option>
             </select>
         </div>
-        <div id="scoresList"></div>
+        <div id="scoresList" style="margin-top: 20px;">Chargement...</div>
     `;
     
     const select = document.getElementById('difficultySelect');
     
-    // Charger les scores pour la difficulté sélectionnée
-    async function loadScores(difficulty) {
+    // ✅ Fonction interne corrigée avec le bon endpoint
+    async function loadScoresForDifficulty(difficulty) {
         const scoresList = document.getElementById('scoresList');
         try {
-            const response = await fetch(`${API_URL}/scores/${encodeURIComponent(difficulty)}`);
+            // ✅ Utiliser /scores/top4/{difficulty} comme showTop4()
+            const response = await fetch(`${API_URL}/scores/top4/${encodeURIComponent(difficulty)}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
             const data = await response.json();
             
-            if (data.success && data.scores.length > 0) {
-                let html = `<h3>Top 4 - ${data.difficulte}</h3>`;
-                html += '<table><thead><tr><th>🏆 Rang</th><th>Pseudo</th><th>Temps</th><th>Date</th></tr></thead><tbody>';
-                data.scores.forEach((score) => {
-                    const medal = score.rang === 1 ? '🥇' : score.rang === 2 ? '🥈' : score.rang === 3 ? '🥉' : '🏅';
-                    html += `<tr>
-                        <td>${medal} ${score.rang}</td>
-                        <td><strong>${score.pseudo}</strong></td>
-                        <td>${score.temps}s</td>
-                        <td>${score.date}</td>
+            if (data.scores && data.scores.length > 0) {
+                let html = `<h3 style="color: #667eea; margin-bottom: 15px;">Top 4 - ${difficulty}</h3>`;
+                html += '<table style="width: 100%; border-collapse: collapse;">';
+                html += '<thead><tr style="background: #667eea; color: white;">';
+                html += '<th style="padding: 12px; text-align: left;">🏆 Rang</th>';
+                html += '<th style="padding: 12px; text-align: left;">Pseudo</th>';
+                html += '<th style="padding: 12px; text-align: center;">Temps</th>';
+                html += '<th style="padding: 12px; text-align: center;">Date</th>';
+                html += '</tr></thead><tbody>';
+                
+                data.scores.forEach((score, index) => {
+                    const medals = ['🥇', '🥈', '🥉', '🏅'];
+                    const medal = medals[score.rang - 1] || '🏅';
+                    const bgColor = index % 2 === 0 ? '#cfe2ff' : '#e7f1ff';
+                    
+                    html += `<tr style="background: ${bgColor};">
+                        <td style="padding: 12px;">${medal} ${score.rang}</td>
+                        <td style="padding: 12px; color: black;"><strong>${score.pseudo}</strong></td>
+                        <td style="padding: 12px; text-align: center; font-weight: bold; color: #667eea;">${score.temps}s</td>
+                        <td style="padding: 12px; text-align: center; color: #666;">${score.date}</td>
                     </tr>`;
                 });
                 html += '</tbody></table>';
                 scoresList.innerHTML = html;
             } else {
-                scoresList.innerHTML = `<p>Aucun score enregistré pour la difficulté "${difficulty}"</p>`;
+                scoresList.innerHTML = `<p style="text-align: center; color: #999; padding: 20px;">Aucun score enregistré pour la difficulté "${difficulty}"</p>`;
             }
         } catch (error) {
-            console.error('Erreur:', error);
-            scoresList.innerHTML = '<p>Erreur de chargement des scores</p>';
+            console.error('Erreur chargement scores:', error);
+            scoresList.innerHTML = '<p style="text-align: center; color: #E74C3C; padding: 20px;">❌ Erreur de chargement des scores</p>';
         }
     }
     
     // Événement de changement
-    select.addEventListener('change', () => loadScores(select.value));
+    select.addEventListener('change', () => loadScoresForDifficulty(select.value));
     
     // Afficher le modal et charger les scores initiaux
     showModal('scoreboardModal');
-    loadScores(select.value);
+    loadScoresForDifficulty(select.value);
 }
 </script>
 </body>
