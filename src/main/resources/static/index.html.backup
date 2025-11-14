@@ -610,60 +610,40 @@ function showScoresModal() {
     }
 
     async function showScoreboard() {
-    const content = document.getElementById('scoreboardContent');
+    const difficulty = prompt('Quelle difficulté voulez-vous voir ?\n\nEntrez:\n- Débutant\n- Intermédiaire\n- Expert\n- Personnalisé', currentDifficulty);
+    if (!difficulty) return;
     
-    // Créer le menu de sélection
-    content.innerHTML = `
-        <div>
-            <label for="difficultySelect">Sélectionnez une difficulté :</label>
-            <select id="difficultySelect">
-                <option value="Débutant" ${currentDifficulty = 'Débutant' ? 'selected' : ''}>🟢 Débutant</option>
-                <option value="Intermédiaire" ${currentDifficulty = 'Intermédiaire' ? 'selected' : ''}>🟡 Intermédiaire</option>
-                <option value="Expert" ${currentDifficulty = 'Expert' ? 'selected' : ''}>🔴 Expert</option>
-                <option value="Personnalisé" ${currentDifficulty = 'Personnalisé' ? 'selected' : ''}>⚙️ Personnalisé</option>
-            </select>
-        </div>
-        <div id="scoresList"></div>
-    `;
-    
-    const select = document.getElementById('difficultySelect');
-    
-    // Charger les scores pour la difficulté sélectionnée
-    async function loadScores(difficulty) {
-        const scoresList = document.getElementById('scoresList');
-        try {
-            const response = await fetch(`${API_URL}/scores/${encodeURIComponent(difficulty)}`);
-            const data = await response.json();
+    try {
+        const response = await fetch(`${API_URL}/scores/${encodeURIComponent(difficulty)}`);
+        const data = await response.json();
+        const content = document.getElementById('scoreboardContent');
+        
+        if (data.success && data.scores.length > 0) {
+            let html = `<h3 style="text-align:center; margin-bottom:15px;">Top 4 - ${data.difficulte}</h3>`;
+            html += '<table><thead><tr><th>🏆 Rang</th><th>Pseudo</th><th>Temps</th><th>Date</th></tr></thead><tbody>';
             
-            if (data.success && data.scores.length > 0) {
-                let html = `<h3>Top 4 - ${data.difficulte}</h3>`;
-                html += '<table><thead><tr><th>🏆 Rang</th><th>Pseudo</th><th>Temps</th><th>Date</th></tr></thead><tbody>';
-                data.scores.forEach((score) => {
-                    const medal = score.rang === 1 ? '🥇' : score.rang === 2 ? '🥈' : score.rang === 3 ? '🥉' : '🏅';
-                    html += `<tr>
-                        <td>${medal} ${score.rang}</td>
-                        <td><strong>${score.pseudo}</strong></td>
-                        <td>${score.temps}s</td>
-                        <td>${score.date}</td>
-                    </tr>`;
-                });
-                html += '</tbody></table>';
-                scoresList.innerHTML = html;
-            } else {
-                scoresList.innerHTML = `<p>Aucun score enregistré pour la difficulté "${difficulty}"</p>`;
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-            scoresList.innerHTML = '<p>Erreur de chargement des scores</p>';
+            data.scores.forEach((score) => {
+                const medal = score.rang === 1 ? '🥇' : score.rang === 2 ? '🥈' : score.rang === 3 ? '🥉' : '🏅';
+                html += `<tr>
+                    <td>${medal} ${score.rang}</td>
+                    <td><strong>${score.pseudo}</strong></td>
+                    <td>${score.temps}s</td>
+                    <td>${score.date}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            content.innerHTML = html;
+        } else {
+            content.innerHTML = `<p style="text-align:center;">Aucun score enregistré pour la difficulté "${difficulty}"</p>`;
         }
+        
+        showModal('scoreboardModal');
+    } catch (error) {
+        console.error('Erreur:', error);
+        document.getElementById('scoreboardContent').innerHTML = '<p style="text-align:center; color:#E74C3C;">Erreur de chargement des scores</p>';
+        showModal('scoreboardModal');
     }
-    
-    // Événement de changement
-    select.addEventListener('change', () => loadScores(select.value));
-    
-    // Afficher le modal et charger les scores initiaux
-    showModal('scoreboardModal');
-    loadScores(select.value);
 }
 </script>
 </body>
