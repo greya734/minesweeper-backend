@@ -15,7 +15,7 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql.conf.cnf:/etc/mysql/conf.d/mysql.conf.cnf
     networks:
       - minesweeper-network
     command:

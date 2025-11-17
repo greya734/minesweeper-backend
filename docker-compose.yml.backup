@@ -18,7 +18,11 @@ services:
       - ./database.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - minesweeper-network
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --init-connect='SET NAMES utf8mb4'
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
       interval: 10s
@@ -28,6 +32,14 @@ services:
   app:
     container_name: minesweeper-app
     restart: always
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://minesweeper-mysql:3306/Minesweeper?useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SERVER_PORT: 80
+      SPRING_JPA_PROPERTIES_HIBERNATE_CONNECTION_CHARSET: utf8mb4
+      SPRING_JPA_PROPERTIES_HIBERNATE_CONNECTION_CHARACTERENCODING: utf8mb4
+      SPRING_JPA_PROPERTIES_HIBERNATE_CONNECTION_USEUNICODE: true
     build:
       context: .
       dockerfile: Dockerfile

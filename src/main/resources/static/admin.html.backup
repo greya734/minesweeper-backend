@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Admin - Minesweeper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-delete-all {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .btn-back {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .filter {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter select, .filter input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            font-weight: bold;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-edit {
+            background: #3498db;
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            padding: 8px 16px;
+            font-size: 0.85em;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .medal {
+            font-size: 1.2em;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 0.85em;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
+
+            .actions-cell {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Administration Minesweeper</h1>
+        <p class="subtitle">Gérez les scores et les statistiques</p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Scores</div>
+                <div class="stat-value" id="totalScores">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Scores Affichés</div>
+                <div class="stat-value" id="filteredScores">0</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-refresh" onclick="loadScores()">🔄 Actualiser</button>
+            <button class="btn-delete-all" onclick="confirmDeleteAll()">🗑️ Tout Supprimer</button>
+            <button class="btn-back" onclick="window.location.href='/'">⬅️ Retour au Jeu</button>
+        </div>
+
+        <div class="filter">
+            <label>Filtrer par difficulté :</label>
+            <select id="filterDifficulty" onchange="filterScores()">
+                <option value="">Toutes</option>
+                <option value="Débutant">Débutant</option>
+                <option value="Intermédiaire">Intermédiaire</option>
+                <option value="Expert">Expert</option>
+                <option value="Personnalisé">Personnalisé</option>
+            </select>
+
+            <label style="margin-left: 20px;">Rechercher :</label>
+            <input type="text" id="searchPseudo" placeholder="Pseudo..." oninput="filterScores()">
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            ⏳ Chargement...
+        </div>
+
+        <div id="tableContainer"></div>
+    </div>
+
+    <!-- Modal Édition -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>✏️ Modifier le Score</h2>
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                
+                <div class="form-group">
+                    <label>Pseudo</label>
+                    <input type="text" id="editPseudo" required maxlength="50">
+                </div>
+
+                <div class="form-group">
+                    <label>Difficulté</label>
+                    <select id="editDifficulte" required>
+                        <option value="Débutant">Débutant</option>
+                        <option value="Intermédiaire">Intermédiaire</option>
+                        <option value="Expert">Expert</option>
+                        <option value="Personnalisé">Personnalisé</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Temps (secondes)</label>
+                    <input type="number" id="editTemps" required min="1">
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="submit" class="btn-refresh" style="flex: 1;">💾 Enregistrer</button>
+                    <button type="button" class="btn-back" onclick="closeEditModal()" style="flex: 1;">❌ Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://minesweeper.btsinfo.nc/api';
+
+        let allScores = [];
+
+        // Charger tous les scores
+        async function loadScores() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('tableContainer').innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_URL}/admin/scores`);
+                allScores = await response.json();
+                
+                document.getElementById('totalScores').textContent = allScores.length;
+                filterScores();
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des scores');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // Filtrer les scores
+        function filterScores() {
+            const difficulty = document.getElementById('filterDifficulty').value;
+            const search = document.getElementById('searchPseudo').value.toLowerCase();
+
+            const filtered = allScores.filter(score => {
+                const matchDifficulty = !difficulty || score.difficulte === difficulty;
+                const matchSearch = !search || score.pseudo.toLowerCase().includes(search);
+                return matchDifficulty && matchSearch;
+            });
+
+            document.getElementById('filteredScores').textContent = filtered.length;
+            renderTable(filtered);
+        }
+
+        // Afficher le tableau
+        function renderTable(scores) {
+            const container = document.getElementById('tableContainer');
+
+            if (scores.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <h3>Aucun score trouvé</h3>
+                        <p>Les scores apparaîtront ici après les parties.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Trier par date (plus récent en premier)
+            scores.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Pseudo</th>
+                            <th>Difficulté</th>
+                            <th>Temps</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${scores.map(score => `
+                            <tr>
+                                <td>${score.id}</td>
+                                <td><strong>${escapeHtml(score.pseudo)}</strong></td>
+                                <td>${getDifficultyBadge(score.difficulte)}</td>
+                                <td><strong>${score.temps}s</strong></td>
+                                <td>${formatDate(score.date)}</td>
+                                <td>
+                                    <div class="actions-cell">
+                                        <button class="btn-edit" onclick="editScore(${score.id})">✏️ Modifier</button>
+                                        <button class="btn-delete" onclick="deleteScore(${score.id})">🗑️ Supprimer</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // Badge difficulté
+        function getDifficultyBadge(difficulty) {
+            const badges = {
+                'Débutant': '🟢 Débutant',
+                'Intermédiaire': '🟡 Intermédiaire',
+                'Expert': '🔴 Expert',
+                'Personnalisé': '⚙️ Personnalisé'
+            };
+            return badges[difficulty] || difficulty;
+        }
+
+        // Formater la date
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Échapper HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Modifier un score
+        async function editScore(id) {
+            const score = allScores.find(s => s.id === id);
+            if (!score) return;
+
+            document.getElementById('editId').value = score.id;
+            document.getElementById('editPseudo').value = score.pseudo;
+            document.getElementById('editDifficulte').value = score.difficulte;
+            document.getElementById('editTemps').value = score.temps;
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        // Fermer modal
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        // Sauvegarder modifications
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const id = document.getElementById('editId').value;
+            const data = {
+                pseudo: document.getElementById('editPseudo').value,
+                difficulte: document.getElementById('editDifficulte').value,
+                temps: parseInt(document.getElementById('editTemps').value)
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/admin/scores/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    closeEditModal();
+                    loadScores();
+                    alert('✅ Score modifié avec succès !');
+                } else {
+                    alert('❌ Erreur lors de la modification');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('❌ Erreur réseau');
+            }
+        });
+
+        // Supprimer un score
+        async function deleteScore(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce score ?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/admin/scores/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadScores();
+                    alert('✅ Score supprimé');
+                } else {
+                    alert('❌ Erreur lors de la suppression');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('❌ Erreur réseau');
+            }
+        }
+
+        // Supprimer tous les scores
+        async function confirmDeleteAll() {
+            const confirmation = prompt('⚠️ ATTENTION ! Tapez "SUPPRIMER TOUT" pour confirmer la suppression de tous les scores :');
+            
+            if (confirmation !== 'SUPPRIMER TOUT') {
+                alert('❌ Suppression annulée');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/admin/scores`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    loadScores();
+                    alert('✅ Tous les scores ont été supprimés');
+                } else {
+                    alert('❌ Erreur lors de la suppression');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('❌ Erreur réseau');
+            }
+        }
+
+        // Fermer modal en cliquant à l'extérieur
+        window.onclick = (event) => {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        };
+
+        // Charger au démarrage
+        loadScores();
+    </script>
+</body>
+</html>

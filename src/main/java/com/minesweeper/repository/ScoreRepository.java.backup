@@ -9,16 +9,11 @@ import java.util.List;
 
 @Repository
 public interface ScoreRepository extends JpaRepository<Score, Long> {
-    
+
     @Query(value = "SELECT * FROM score WHERE difficulte = :difficulte " +
-                   "ORDER BY temps ASC LIMIT 4", 
-           nativeQuery = true)
+            "ORDER BY temps ASC LIMIT 4",
+            nativeQuery = true)
     List<Score> findTop4ByDifficulteOrderByTempsAsc(@Param("difficulte") String difficulte);
-    
+
     List<Score> findByDifficulteOrderByTempsAsc(String difficulte);
-    
-    @Query(value = "SELECT difficulte, COUNT(*) as count, MIN(temps) as best, AVG(temps) as avg " +
-                   "FROM score GROUP BY difficulte", 
-           nativeQuery = true)
-    List<Object[]> findStatsByDifficulty();
 }
