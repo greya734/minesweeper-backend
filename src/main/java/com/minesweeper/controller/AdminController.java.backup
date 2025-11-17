@@ -6,7 +6,6 @@ import com.minesweeper.entity.Score;
 import com.minesweeper.repository.ScoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -28,10 +27,7 @@ public class AdminController {
         this.scoreRepository = scoreRepository;
     }
     
-    /**
-     * Récupérer tous les scores
-     * Route protégée - Nécessite une authentification
-     */
+    // Récupérer tous les scores
     @GetMapping("/scores")
     public ResponseEntity<List<ScoreResponse>> getAllScores() {
         List<Score> scores = scoreRepository.findAll();
@@ -41,10 +37,7 @@ public class AdminController {
         return ResponseEntity.ok(response);
     }
     
-    /**
-     * Récupérer un score par ID
-     * Route protégée - Nécessite une authentification
-     */
+    // Récupérer un score par ID
     @GetMapping("/scores/{id}")
     public ResponseEntity<ScoreResponse> getScoreById(@PathVariable Long id) {
         return scoreRepository.findById(id)
@@ -52,10 +45,7 @@ public class AdminController {
             .orElse(ResponseEntity.notFound().build());
     }
     
-    /**
-     * Créer un nouveau score
-     * Route protégée - Nécessite une authentification
-     */
+    // Créer un score
     @PostMapping("/scores")
     public ResponseEntity<ScoreResponse> createScore(@RequestBody ScoreRequest request) {
         Score score = new Score();
@@ -68,10 +58,7 @@ public class AdminController {
         return ResponseEntity.ok(toResponse(saved));
     }
     
-    /**
-     * Modifier un score existant
-     * Route protégée - Nécessite une authentification
-     */
+    // Modifier un score
     @PutMapping("/scores/{id}")
     public ResponseEntity<ScoreResponse> updateScore(
             @PathVariable Long id, 
@@ -88,10 +75,7 @@ public class AdminController {
             .orElse(ResponseEntity.notFound().build());
     }
     
-    /**
-     * Supprimer un score
-     * Route protégée - Nécessite une authentification
-     */
+    // Supprimer un score
     @DeleteMapping("/scores/{id}")
     public ResponseEntity<Void> deleteScore(@PathVariable Long id) {
         if (scoreRepository.existsById(id)) {
@@ -101,10 +85,7 @@ public class AdminController {
         return ResponseEntity.notFound().build();
     }
     
-    /**
-     * Supprimer tous les scores d'une difficulté
-     * Route protégée - Nécessite une authentification
-     */
+    // Supprimer tous les scores d'une difficulté
     @DeleteMapping("/scores/difficulty/{difficulte}")
     public ResponseEntity<Void> deleteByDifficulty(@PathVariable String difficulte) {
         List<Score> scores = scoreRepository.findByDifficulteOrderByTempsAsc(difficulte);
@@ -112,21 +93,14 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
     
-    /**
-     * Supprimer tous les scores
-     * Route protégée - Nécessite une authentification
-     * ATTENTION : Action irréversible !
-     */
+    // Supprimer tous les scores
     @DeleteMapping("/scores")
     public ResponseEntity<Void> deleteAllScores() {
         scoreRepository.deleteAll();
         return ResponseEntity.noContent().build();
     }
     
-    /**
-     * Statistiques globales
-     * Route protégée - Nécessite une authentification
-     */
+    // Statistiques
     @GetMapping("/stats")
     public ResponseEntity<?> getStats() {
         long total = scoreRepository.count();
@@ -138,9 +112,6 @@ public class AdminController {
         }});
     }
     
-    /**
-     * Convertir une entité Score en ScoreResponse
-     */
     private ScoreResponse toResponse(Score score) {
         return new ScoreResponse(
             score.getId(),

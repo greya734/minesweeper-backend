@@ -3,12 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔐 Admin - Minesweeper</title>
-    <link rel="stylesheet" href="admin.css">    
+    <title>🔒 Admin - Minesweeper</title>
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        /* Styles pour l'écran de connexion */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .login-box h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .login-box p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            display: none;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+
+        .user-info {
+            color: #666;
+            font-size: 14px;
+            margin-left: 20px;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <a href="/" class="back-link">← Retour au jeu</a>
+    <!-- Écran de connexion -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h1>🔒 Connexion Admin</h1>
+            <p>Accès au panneau d'administration</p>
+            
+            <div id="errorMessage" class="error-message"></div>
+            
+            <form id="loginForm" onsubmit="login(event)">
+                <div class="form-group">
+                    <label>👤 Nom d'utilisateur</label>
+                    <input type="text" id="username" required autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label>🔑 Mot de passe</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn-login" id="loginBtn">Se connecter</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interface admin (cachée par défaut) -->
+    <div id="adminScreen" class="container" style="display: none;">
+        <div class="admin-header">
+            <div>
+                <a href="/" class="back-link">← Retour au jeu</a>
+                <span class="user-info" id="userInfo"></span>
+            </div>
+            <button class="logout-btn" onclick="logout()">🚪 Déconnexion</button>
+        </div>
         
         <h1>🔐 Panneau d'Administration</h1>
         <p class="subtitle">Gestion des scores du démineur</p>
@@ -103,17 +249,160 @@
     </div>
 
     <script>
+        // Configuration API - À adapter selon votre environnement
         const API_URL = 'https://minesweeper.btsinfo.nc/api';
+        // Pour développement local : const API_URL = 'http://localhost/api';
 
         let allScores = [];
+        let currentUser = null;
+        let authToken = null;
 
-        // Charger les scores
+        // Vérifier la session au chargement
+        window.onload = function() {
+            checkSession();
+        };
+
+        // Vérifier si l'utilisateur est connecté
+        function checkSession() {
+            const storedUser = localStorage.getItem('adminUser');
+            const storedToken = localStorage.getItem('adminToken');
+            
+            if (storedUser && storedToken) {
+                currentUser = storedUser;
+                authToken = storedToken;
+                showAdminScreen();
+            } else {
+                showLoginScreen();
+            }
+        }
+
+        // Connexion avec API
+        async function login(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            // Désactiver le bouton pendant la requête
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Connexion...';
+            
+            try {
+                const response = await fetch(`${API_URL}/admin/login`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        username: username, 
+                        password: password 
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Stocker les informations de session
+                    localStorage.setItem('adminUser', username);
+                    localStorage.setItem('adminToken', data.token);
+                    currentUser = username;
+                    authToken = data.token;
+                    
+                    showAdminScreen();
+                    showNotification('Connexion réussie !', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showError(errorData.message || 'Identifiants incorrects');
+                }
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                showError('Erreur de connexion au serveur');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Se connecter';
+            }
+        }
+
+        // Déconnexion
+        async function logout() {
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
+                try {
+                    // Appeler l'API de déconnexion si nécessaire
+                    await fetch(`${API_URL}/admin/logout`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                } catch (error) {
+                    console.error('Erreur lors de la déconnexion:', error);
+                }
+                
+                localStorage.removeItem('adminUser');
+                localStorage.removeItem('adminToken');
+                currentUser = null;
+                authToken = null;
+                showLoginScreen();
+                showNotification('Déconnexion réussie', 'success');
+            }
+        }
+
+        // Afficher l'écran de connexion
+        function showLoginScreen() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminScreen').style.display = 'none';
+            document.getElementById('loginForm').reset();
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        // Afficher l'écran admin
+        function showAdminScreen() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('adminScreen').style.display = 'block';
+            document.getElementById('userInfo').textContent = `Connecté en tant que : ${currentUser}`;
+            loadScores();
+        }
+
+        // Afficher une erreur de connexion
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Fonction helper pour les requêtes authentifiées
+        async function authenticatedFetch(url, options = {}) {
+            const headers = {
+                ...options.headers,
+                'Authorization': `Bearer ${authToken}`
+            };
+            
+            const response = await fetch(url, { ...options, headers });
+            
+            // Si non autorisé, rediriger vers la connexion
+            if (response.status === 401 || response.status === 403) {
+                localStorage.removeItem('adminUser');
+                localStorage.removeItem('adminToken');
+                showLoginScreen();
+                showNotification('Session expirée, veuillez vous reconnecter', 'error');
+                throw new Error('Session expirée');
+            }
+            
+            return response;
+        }
+
+        // Charger les scores (avec authentification)
         async function loadScores() {
             try {
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('scoresTable').style.display = 'none';
 
-                const response = await fetch(`${API_URL}/admin/scores`);
+                const response = await authenticatedFetch(`${API_URL}/admin/scores`);
                 allScores = await response.json();
                 
                 displayScores(allScores);
@@ -123,7 +412,9 @@
                 document.getElementById('scoresTable').style.display = 'table';
             } catch (error) {
                 console.error('Erreur:', error);
-                showNotification('Erreur de chargement', 'error');
+                if (error.message !== 'Session expirée') {
+                    showNotification('Erreur de chargement', 'error');
+                }
             }
         }
 
@@ -209,7 +500,7 @@
             document.getElementById('scoreModal').style.display = 'block';
         }
 
-        // Enregistrer (créer ou modifier)
+        // Enregistrer (créer ou modifier) avec authentification
         async function saveScore(event) {
             event.preventDefault();
 
@@ -224,7 +515,7 @@
                 const url = id ? `${API_URL}/admin/scores/${id}` : `${API_URL}/admin/scores`;
                 const method = id ? 'PUT' : 'POST';
 
-                const response = await fetch(url, {
+                const response = await authenticatedFetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -237,16 +528,18 @@
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                showNotification('Erreur lors de l\'enregistrement', 'error');
+                if (error.message !== 'Session expirée') {
+                    showNotification('Erreur lors de l\'enregistrement', 'error');
+                }
             }
         }
 
-        // Supprimer un score
+        // Supprimer un score avec authentification
         async function deleteScore(id) {
             if (!confirm('Voulez-vous vraiment supprimer ce score ?')) return;
 
             try {
-                const response = await fetch(`${API_URL}/admin/scores/${id}`, {
+                const response = await authenticatedFetch(`${API_URL}/admin/scores/${id}`, {
                     method: 'DELETE'
                 });
 
@@ -256,17 +549,19 @@
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                showNotification('Erreur lors de la suppression', 'error');
+                if (error.message !== 'Session expirée') {
+                    showNotification('Erreur lors de la suppression', 'error');
+                }
             }
         }
 
-        // Supprimer tous les scores
+        // Supprimer tous les scores avec authentification
         async function confirmDeleteAll() {
             if (!confirm('⚠️ ATTENTION ⚠️\n\nVoulez-vous vraiment supprimer TOUS les scores ?\nCette action est irréversible !')) return;
             if (!confirm('Êtes-vous vraiment sûr ? Tous les scores seront perdus !')) return;
 
             try {
-                const response = await fetch(`${API_URL}/admin/scores`, {
+                const response = await authenticatedFetch(`${API_URL}/admin/scores`, {
                     method: 'DELETE'
                 });
 
@@ -276,7 +571,9 @@
                 }
             } catch (error) {
                 console.error('Erreur:', error);
-                showNotification('Erreur lors de la suppression', 'error');
+                if (error.message !== 'Session expirée') {
+                    showNotification('Erreur lors de la suppression', 'error');
+                }
             }
         }
 
@@ -290,6 +587,17 @@
             const notif = document.createElement('div');
             notif.className = `notification ${type}`;
             notif.textContent = message;
+            notif.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#27AE60' : '#E74C3C'};
+                color: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                z-index: 9999;
+            `;
             document.body.appendChild(notif);
 
             setTimeout(() => notif.remove(), 3000);
@@ -302,9 +610,6 @@
                 closeModal();
             }
         };
-
-        // Charger au démarrage
-        loadScores();
     </script>
 </body>
 </html>
